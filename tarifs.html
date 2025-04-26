@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Tarifs Hôtel (v8)</title>
+    <!-- Tailwind via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+     <!-- Charger Chart.js et adaptateur date POUR LA NOUVELLE SECTION -->
+     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <!-- CSS Commun -->
+    <link rel="stylesheet" href="style.css">
+    <script>
+        // Configuration Tailwind (inchangée)
+        tailwind.config = { /* ... Votre config ... */ };
+    </script>
+</head>
+<body class="bg-charcoal-dark text-gray-100 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-5xl"> <!-- Max-width ajustée -->
+        <!-- Header -->
+        <header class="mb-8 flex justify-between items-center">
+             <div>
+                 <h1 class="text-3xl font-bold bg-gradient-to-r from-vibrant-orange to-light-orange bg-clip-text text-transparent">
+                     Gestion Tarifs Hôtel
+                 </h1>
+                 <p class="text-sm text-gray-400">Folkestone Opera - Calcul, Vérification & Comparaison</p>
+             </div>
+        </header>
+
+        <div id="global-message-area-tarifs"></div> <!-- Zone Messages -->
+
+        <!-- Section Choix Initial avec 4 Cartes -->
+        <div id="choice-section" class="mb-8 fade-in">
+            <h2 class="text-xl font-semibold mb-6 text-center text-light-orange">Que souhaitez-vous faire ?</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"> <!-- Passage à 4 colonnes sur grand écran -->
+                <!-- Carte Calculer -->
+                <div class="choice-card glass-card rounded-xl p-6 text-center hover:bg-darker-charcoal/80" data-target="calculate-section"><div class="mb-4 text-4xl text-vibrant-orange"><i class="fas fa-calculator"></i></div><h3 class="text-lg font-semibold mb-2 text-gray-100">Calculer Tarif</h3><p class="text-sm text-gray-400">Estimer le coût.</p></div>
+                <!-- Carte Vérifier -->
+                <div class="choice-card glass-card rounded-xl p-6 text-center hover:bg-darker-charcoal/80" data-target="verify-section"><div class="mb-4 text-4xl text-accent-green"><i class="fas fa-check-double"></i></div><h3 class="text-lg font-semibold mb-2 text-gray-100">Vérifier Résa</h3><p class="text-sm text-gray-400">Comparer total reçu.</p></div>
+                <!-- Carte Comparer (Simple) -->
+                <div class="choice-card glass-card rounded-xl p-6 text-center hover:bg-darker-charcoal/80" data-target="compare-section"><div class="mb-4 text-4xl text-accent-blue"><i class="fas fa-exchange-alt"></i></div><h3 class="text-lg font-semibold mb-2 text-gray-100">Comparer Plans</h3><p class="text-sm text-gray-400">Voir écart entre 2 plans.</p></div>
+                 <!-- NOUVELLE Carte Comparer Avancé -->
+                 <div class="choice-card glass-card rounded-xl p-6 text-center hover:bg-darker-charcoal/80" data-target="compare-adv-section"> <div class="mb-4 text-4xl text-purple-400"><i class="fas fa-chart-pie"></i></div><h3 class="text-lg font-semibold mb-2 text-gray-100">Comparer Avancé</h3><p class="text-sm text-gray-400">Graphique Partenaire/Plan.</p></div>
+            </div>
+        </div>
+
+        <!-- Section Calculer (Inchangé) -->
+        <div id="calculate-section" class="hidden fade-in">
+             <div class="glass-card rounded-xl p-6 mb-8 shadow-lg">
+                 <h2 class="text-xl font-semibold mb-6 text-light-orange highlight-orange">Calculer un Tarif</h2>
+                 <form id="calculate-form" novalidate>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                         <div><label for="calculate-arrival-date" class="label-style">Date d'arrivée</label><input type="date" class="input-style" id="calculate-arrival-date" required></div>
+                         <div><label for="calculate-nights" class="label-style">Nuits</label><input type="number" class="input-style" id="calculate-nights" min="1" max="90" required value="1"></div>
+                         <div><label for="calculate-room-category" class="label-style">Catégorie</label><select class="input-style" id="calculate-room-category" required><option value="">Chargement...</option></select></div>
+                         <div><label for="calculate-rate-plan" class="label-style">Plan tarifaire</label><select class="input-style" id="calculate-rate-plan" required disabled><option value="">Catégorie d'abord</option></select><div id="calculate-rate-plan-help" class="form-text-style rate-info"></div></div>
+                         <div class="md:col-span-2"><label for="calculate-discount" class="label-style">Remise (%)</label><input type="number" class="input-style" id="calculate-discount" min="0" max="100" step="0.01" value="0"><div class="form-text-style">Optionnel.</div></div>
+                     </div>
+                     <div class="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
+                         <button type="button" class="btn-action btn-action-outline btn-back btn-back-green w-full md:w-auto"><i class="fas fa-arrow-left mr-2"></i>Retour au Choix</button>
+                         <button type="submit" class="btn-action btn-gradient-orange w-full md:w-auto"><i class="fas fa-calculator mr-2"></i>Calculer</button>
+                     </div>
+                  </form>
+             </div>
+             <div id="calculate-result" class="result-section hidden"></div>
+        </div>
+
+        <!-- Section Vérifier (Inchangé) -->
+        <div id="verify-section" class="hidden fade-in">
+             <div class="glass-card rounded-xl p-6 mb-8 shadow-lg">
+                  <h2 class="text-xl font-semibold mb-6 text-light-orange highlight-orange">Vérifier une Réservation</h2>
+                  <form id="verify-form" novalidate>
+                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+                          <div><label for="verify-arrival-date" class="label-style">Date d'arrivée</label><input type="date" class="input-style" id="verify-arrival-date" required></div>
+                          <div><label for="verify-nights" class="label-style">Nuits</label><input type="number" class="input-style" id="verify-nights" min="1" max="90" required value="1"></div>
+                          <div><label for="verify-discount" class="label-style">Remise (%)</label><input type="number" class="input-style" id="verify-discount" min="0" max="100" step="0.01" value="0"></div>
+                          <div><label for="verify-room-category" class="label-style">Catégorie</label><select class="input-style" id="verify-room-category" required><option value="">Chargement...</option></select></div>
+                          <div><label for="verify-rate-plan" class="label-style">Plan tarifaire</label><select class="input-style" id="verify-rate-plan" required disabled><option value="">Catégorie d'abord</option></select><div id="verify-rate-plan-help" class="form-text-style rate-info"></div></div>
+                          <div><label for="received-total" class="label-style">Total reçu (€)</label><input type="number" class="input-style" id="received-total" min="0" step="0.01" required></div>
+                     </div>
+                      <div class="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
+                         <button type="button" class="btn-action btn-action-outline btn-back btn-back-green w-full md:w-auto"><i class="fas fa-arrow-left mr-2"></i>Retour au Choix</button>
+                         <button type="submit" class="btn-action btn-green-vibrant w-full md:w-auto"><i class="fas fa-check-double mr-2"></i>Vérifier</button>
+                     </div>
+                 </form>
+             </div>
+             <div id="verify-result" class="result-section hidden"></div>
+        </div>
+
+        <!-- Section Comparer (Simple - Inchangé) -->
+        <div id="compare-section" class="hidden fade-in">
+             <div class="glass-card rounded-xl p-6 mb-8 shadow-lg">
+                 <h2 class="text-xl font-semibold mb-6 text-light-orange highlight-orange">Comparer des Tarifs (par Plan)</h2>
+                 <form id="compare-form" novalidate>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                          <div><label for="compare-arrival-date" class="label-style">Date d'arrivée</label><input type="date" class="input-style" id="compare-arrival-date" required></div>
+                          <div><label for="compare-nights" class="label-style">Nuits</label><input type="number" class="input-style" id="compare-nights" min="1" max="90" required value="1"></div>
+                          <div class="md:col-span-2"><label for="compare-room-category" class="label-style">Catégorie</label><select class="input-style" id="compare-room-category" required><option value="">Chargement...</option></select></div>
+                          <div><label for="compare-rate-plan-1" class="label-style">Plan Tarifaire 1</label><select class="input-style" id="compare-rate-plan-1" required disabled><option value="">Catégorie d'abord</option></select><div id="compare-rate-plan-1-help" class="form-text-style rate-info"></div></div>
+                          <div><label for="compare-rate-plan-2" class="label-style">Plan Tarifaire 2</label><select class="input-style" id="compare-rate-plan-2" required disabled><option value="">Catégorie d'abord</option></select><div id="compare-rate-plan-2-help" class="form-text-style rate-info"></div></div>
+                     </div>
+                      <div class="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
+                         <button type="button" class="btn-action btn-action-outline btn-back btn-back-green w-full md:w-auto"><i class="fas fa-arrow-left mr-2"></i>Retour au Choix</button>
+                         <button type="submit" class="btn-action btn-blue-vibrant w-full md:w-auto"><i class="fas fa-exchange-alt mr-2"></i>Comparer</button>
+                     </div>
+                  </form>
+             </div>
+             <div id="compare-result" class="result-section hidden"></div>
+        </div>
+
+        <!-- NOUVELLE Section Comparer Avancé -->
+        <div id="compare-adv-section" class="hidden fade-in">
+            <div class="glass-card rounded-xl p-6 mb-8 shadow-lg">
+                <h2 class="text-xl font-semibold mb-6 text-light-orange highlight-orange">Comparaison Avancée (Partenaire/Plan)</h2>
+                <form id="compare-adv-form" novalidate>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mb-6 pb-6 border-b border-slate-700">
+                        <div><label for="compare-adv-start-date" class="label-style">Date de début</label><input type="date" id="compare-adv-start-date" class="input-style" required></div>
+                        <div><label for="compare-adv-end-date" class="label-style">Date de fin</label><input type="date" id="compare-adv-end-date" class="input-style" required></div>
+                        <div><label for="compare-adv-room-category" class="label-style">Catégorie</label><select class="input-style" id="compare-adv-room-category" required><option value="">Chargement...</option></select></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                        <!-- Colonne Partenaire/Plan 1 -->
+                        <div class="space-y-4">
+                             <h4 class="text-lg font-medium text-gray-200 border-b border-slate-600 pb-1">Sélection 1</h4>
+                             <div><label for="compare-adv-partner1" class="label-style">Partenaire 1</label><select class="input-style" id="compare-adv-partner1" required disabled><option value="">Catégorie d'abord</option></select></div>
+                             <div><label for="compare-adv-rate-plan1" class="label-style">Plan Tarifaire 1</label><select class="input-style" id="compare-adv-rate-plan1" required disabled><option value="">Partenaire d'abord</option></select><div id="compare-adv-rate-plan1-help" class="form-text-style rate-info"></div></div>
+                        </div>
+                        <!-- Colonne Partenaire/Plan 2 -->
+                        <div class="space-y-4">
+                             <h4 class="text-lg font-medium text-gray-200 border-b border-slate-600 pb-1">Sélection 2</h4>
+                             <div><label for="compare-adv-partner2" class="label-style">Partenaire 2</label><select class="input-style" id="compare-adv-partner2" required disabled><option value="">Catégorie d'abord</option></select></div>
+                             <div><label for="compare-adv-rate-plan2" class="label-style">Plan Tarifaire 2</label><select class="input-style" id="compare-adv-rate-plan2" required disabled><option value="">Partenaire d'abord</option></select><div id="compare-adv-rate-plan2-help" class="form-text-style rate-info"></div></div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row justify-between items-center mt-8 gap-4">
+                        <button type="button" class="btn-action btn-action-outline btn-back btn-back-green w-full md:w-auto"><i class="fas fa-arrow-left mr-2"></i>Retour au Choix</button>
+                        <button type="submit" class="btn-action bg-purple-600 hover:bg-purple-700 text-white glow-on-hover w-full md:w-auto"><i class="fas fa-chart-pie mr-2"></i>Comparer Avancé</button>
+                    </div>
+                 </form>
+            </div>
+            <!-- Zone pour Graphique et Tableau de la comparaison avancée -->
+            <div id="compare-adv-results" class="hidden fade-in space-y-8">
+                 <div class="glass-card rounded-xl p-4 md:p-6 shadow-lg">
+                      <h3 class="text-lg font-semibold mb-4 text-gray-200">Graphique Comparatif</h3>
+                      <div class="relative h-64 md:h-96">
+                          <canvas id="comparisonAdvChart"></canvas>
+                      </div>
+                 </div>
+                 <div class="glass-card rounded-xl p-4 md:p-6 shadow-lg">
+                      <h3 class="text-lg font-semibold mb-4 text-gray-200">Tableau Comparatif Détaillé</h3>
+                      <div id="comparisonAdvTableContainer" class="overflow-x-auto max-h-96">
+                          <div class="loading">Génération du tableau...</div>
+                      </div>
+                 </div>
+            </div>
+        </div>
+        <!-- Fin Nouvelle Section Comparer Avancé -->
+
+        <!-- Zone pour les messages globaux (Déplacée) -->
+        <div id="global-message-area-tarifs" class="mt-8"></div>
+
+        <!-- Footer -->
+        <footer class="mt-12 text-center text-xs text-gray-500">
+            <p>© 2024 Hôtel Folkestone Opera - Outil Interne Tarifs v8</p>
+        </footer>
+    </div>
+
+    <script src="tarifs.js"></script> <!-- !! Assurez-vous que le nom est correct !! -->
+</body>
+</html>
